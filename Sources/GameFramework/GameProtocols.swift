@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Combine
 
 public typealias CategoriesResponse = ([GameCategory]?,Error?) -> Void
 public typealias QuestionsResponse = ([Question]?,Error?) -> Void
@@ -16,8 +17,14 @@ public typealias QuestionHandler = (Question, Int) -> Void
 public typealias GameStatusHandler = (String, Bool) -> Void
 
 public protocol GameProvider {
-    func getCategories(completion: @escaping CategoriesResponse)
-    func getQuestions(for game: Game, completion: @escaping QuestionsResponse)
+	
+	var categoryPublisher: AnyPublisher<[GameCategory],Error> { get }
+	var questionPublisher: AnyPublisher<[Question],Error> { get }
+	
+  //  func getCategories(completion: @escaping CategoriesResponse)
+  //  func getQuestions(for game: Game, completion: @escaping QuestionsResponse)
+	var difficulties:[Difficulty] { get }
+	var durations:[Int] { get }
 }
 
 public protocol PlayerManager {
@@ -39,6 +46,7 @@ public protocol PlayerManager {
 }
 
 public enum Difficulty: String {
+	case any = "any"
     case easy = "easy"
     case medium = "medium"
     case hard = "hard"
@@ -47,6 +55,14 @@ public enum Difficulty: String {
 public enum QuestionType: String {
     case multipleChoice = "multiple"
     case boolean = "boolean"
+}
+
+public enum GameStatus {
+	case initialised
+	case ready
+	case inProgress
+	case over 
+	case failed(Error)
 }
 
 public protocol GameCategory {

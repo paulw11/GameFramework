@@ -8,7 +8,6 @@
 
 import Foundation
 
-
 public class GameController  {
     
     public private (set) var currentGame: Game? 
@@ -28,13 +27,12 @@ public class GameController  {
         self.playerManager = playerManager
     }
     
-    public func newGame(gameSize: Int, difficulty: Difficulty?, category: GameCategory?) throws {
+    public func newGame(duration: Int, difficulty: Difficulty?, category: GameCategory?) throws {
         guard let provider = self.provider else {
             throw GameError("No provider")
         }
-        self.currentGame = Game(gameSize: gameSize, difficulty: difficulty, category: category)
+		self.currentGame = Game(provider: provider, duration: duration, difficulty: difficulty, category: category)
         self.players = [Player]()
-        self.currentGame?.fetchQuestions(from: provider)
     }
     
     public func gatherPlayers(callback: @escaping NewPlayerHandler) throws {

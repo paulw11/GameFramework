@@ -36,12 +36,26 @@ public final class Game: ObservableObject {
 			switch completion {
 			case .finished:
 				self.status = .ready
-			case .failure(let error):
-				self.status = .failed(error)
+			case .failure:
+				self.status = .failed
 			}
 		}, receiveValue: { (questions) in
 			self.questions = questions
 		})
+	}
+	
+	public func start() {
+		guard self.status == .ready else {
+			fatalError("Attempt to start game that is not ready")
+		}
+		self.status = .inProgress
+	}
+	
+	public func gameOver() {
+		guard self.status == .inProgress else {
+			fatalError("Attempt to end game that is not inProgress")
+		}
+		self.status = .over
 	}
     
    /* public func fetchQuestions(from provider: GameProvider) {

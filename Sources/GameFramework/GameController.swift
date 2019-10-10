@@ -6,25 +6,29 @@
 //  Copyright © 2018 Paul Wilkinson. All rights reserved.
 //
 
+import Combine
 import Foundation
 
-public class GameController  {
+public class GameController {
     
     public private (set) var currentGame: Game? 
     public let provider: GameProvider?
-    public let playerManager: PlayerManager
+    public let playerCoordinator: PlayerCoordinator
+	
     public private (set) var players = [Player]()
     
     public var delegate: GameControllerDelegate?
     
+	private var playerSubscriber: AnyCancellable?
+	
     private var currentQuestionIndex: Int? = nil
     private var answerCount = 0
     
     private var playerScores = [Player:Int]()
     
-    public init(playerManager: PlayerManager, provider: GameProvider? = nil) {
+    public init(playerCoordinator: PlayerCoordinator, provider: GameProvider? = nil) {
         self.provider = provider
-        self.playerManager = playerManager
+        self.playerCoordinator = playerCoordinator
     }
     
     public func newGame(duration: Int, difficulty: Difficulty?, category: GameCategory?) throws {
@@ -35,29 +39,33 @@ public class GameController  {
         self.players = [Player]()
     }
     
-    public func gatherPlayers(callback: @escaping NewPlayerHandler) throws {
+    public func gatherPlayers() throws {
         guard let game = self.currentGame else {
             return
         }
         
-        try self.playerManager.gatherPlayers(for: game) { (player) in
-            self.players.append(player)
-            callback(player)
-        }
+		try self.playerCoordinator.gatherPlayers(for: game)
+		self.playerSubscriber = self.playerCoordinator.playerPublisher.sink(receiveCompletion: { (completion) in
+			
+		}, receiveValue: { (player) in
+			self.players.append(player)
+			self.playerCoordinator.welcome(player: player, to: game)
+		})
     }
     
     public func stopGatheringPlayers() {
-        guard let game = self.currentGame else {
-            return
-        }
-        
-        self.playerManager.stopGatheringPlayers(for: game)
+
+        self.playerSubscriber = nil
     }
     
     public func playGame() {
         guard let game = currentGame else {
             return
         }
+		
+		game.start()
+		
+
         self.currentQuestionIndex = nil
         do {
             try self.playerManager.listenForAnswers(in: game) { (playerID, answer) in
@@ -96,8 +104,11 @@ public class GameController  {
         guard let game = currentGame else {
             return
         }
-        playerManager.stopListeningForAnswers(in: game)
-        playerManager.adviseGameOver(for: game)
+		
+		game.status = .ended
+		
+     //   playerManager.stopListeningForAnswers(in: game)
+     //   playerManager.adviseGameOver(for: game)
         self.delegate?.gameOver()
         self.currentGame = nil
         

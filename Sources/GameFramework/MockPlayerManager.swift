@@ -6,86 +6,38 @@
 //  Copyright © 2019 Paul Wilkinson. All rights reserved.
 //
 
+import Combine
 import Foundation
 
-public class MockPlayerManager: NSObject, PlayerManager {
+final public class MockPlayerManager: PlayerManager {
+	
+	@Published
+	private var mockState: GameStatus = .ready
+	
+	public var questionPublisher: AnyPublisher<Question, Error> {
+		let question = MockQuestion(id: "1",question: "John, Paul, George and Ringo were members of which band?", category: "Music", type: .multipleChoice, difficulty: .easy, answers: ["The Beatles","The Rolling Stones","The Trogs","The Doors"], correctAnswerIndex: 0)
+		return Just<Question>(question).setFailureType(to: Error.self).eraseToAnyPublisher()
+	}
+	
+	public var gameStatusPublisher: AnyPublisher<GameState, Error> {
+		return $mockState.map { (status) -> GameState in
+				GameState(status: status.rawValue, id: "1")
+			}.setFailureType(to: Error.self).eraseToAnyPublisher()
+		
+	}
+	
+	public var playerStatusPublisher: AnyPublisher<PlayerState, Error> {
+		return Just<PlayerState>( PlayerState(id: "1", score: 10, results: ["1":true])).setFailureType(to: Error.self).eraseToAnyPublisher()
+	}
+	
+	public func register(player: Player, for gameID: String) {
+		self.mockState = .inProgress
+	}
+	
+	public func send(answer: String, for player: Player, in gameID: String, questionID: String) {
+		self.mockState = .over
+		
+	}
+	
     
-    private var mockPlayers = [Player]()
-    
-    private var answerHandler: AnswerHandler?
-    
-    public override init() {
-        super.init()
-        mockPlayers.append(Player(id: "1", name: "Bob"))
-        mockPlayers.append(Player(id: "2", name: "Mary"))
-        mockPlayers.append(Player(id: "3", name: "Alice"))
-    }
-    
-    public func gatherPlayers(for game: Game, newPlayerHandler: @escaping NewPlayerHandler) throws {
-        for player in self.mockPlayers {
-            newPlayerHandler(player)
-        }
-    }
-    
-    public func stopGatheringPlayers(for game: Game) {
-        
-    }
-    
-    public func welcome(player: Player, to game: Game) {
-        
-    }
-    
-    public func listenForAnswers(in game: Game, answerHandler: @escaping AnswerHandler) throws {
-        self.answerHandler = answerHandler
-    }
-    
-    public func stopListeningForAnswers(in game: Game) {
-        self.answerHandler = nil
-    }
-    
-    public func notifyGameStart(for game: Game) {
-        
-    }
-    
-    public func requestAnswer(for question: Question, with id: String, in game: Game) {
-        for player in self.mockPlayers {
-            if let answer = question.answers.randomElement() {
-                let randomTime = DispatchTime.now() + Double.random(in: 1...5)
-                DispatchQueue.main.asyncAfter(deadline: randomTime, execute: {
-                    print("\(player.name) answers \(answer)")
-                    self.answerHandler?(player.id,answer)
-                })
-            }
-        }
-    }
-
-public func adviseGameOver(for game: Game) {
-    
-}
-
-public func listenForQuestions(for gameID: String, questionHandler: @escaping QuestionHandler) throws {
-    
-}
-
-public func listenForGameStatus(for gameID: String, statusHandler: @escaping GameStatusHandler) throws {
-    
-}
-
-public func stopListeningForQuestions(for gameID: String) {
-    
-}
-
-public func stopListeningForGameStatus(for gameID: String) {
-    
-}
-
-public func register(player: Player, for gameID: String) {
-    
-}
-
-public func send(answer: String, for playerID: String, in gameID: String, questionID: String) {
-    
-}
-
-
 }

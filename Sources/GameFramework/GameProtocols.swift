@@ -9,103 +9,87 @@
 import Foundation
 import Combine
 
-public typealias CategoriesResponse = ([GameCategory]?,Error?) -> Void
-public typealias QuestionsResponse = ([Question]?,Error?) -> Void
-public typealias NewPlayerHandler = (Player) -> Void
-public typealias AnswerHandler = (String, String) -> Void
-public typealias QuestionHandler = (Question, Int) -> Void
-public typealias GameStatusHandler = (String, Bool) -> Void
-
 public protocol GameProvider {
 	
-	var categoryPublisher: AnyPublisher<[GameCategory],Error> { get }
-	var questionPublisher: AnyPublisher<[Question],Error> { get }
+	var categoryPublisher: AnyPublisher<[GameCategory],GameFrameworkError> { get }
+	var questionPublisher: AnyPublisher<[Question],GameFrameworkError> { get }
 	
-  //  func getCategories(completion: @escaping CategoriesResponse)
-  //  func getQuestions(for game: Game, completion: @escaping QuestionsResponse)
+	//  func getCategories(completion: @escaping CategoriesResponse)
+	//  func getQuestions(for game: Game, completion: @escaping QuestionsResponse)
 	var difficulties:[Difficulty] { get }
-	var durations:[Int] { get }
+	var difficulty: Difficulty? { get set }
+	var durations: [Int] { get }
+	var duration: Int? { get set }
+	var category: GameCategory? { get set }
+}
+
+public protocol PlayerCoordinator {
+	func gatherPlayers(for game: Game) throws
+	func stopGatheringPlayers(for game: Game)
+	func welcome(player: Player, to game: Game)
+	func set(status: GameStatus, for game: Game)
+	func requestAnswer(for question: Question, with id: String, in game: Game)
+	
+	var playerPublisher: AnyPublisher<Player,Error> { get }
+	var answerPublisher: AnyPublisher<PlayerAnswer,Error> { get }
+	var players: [Player] { get }
+	
 }
 
 public protocol PlayerManager {
-    func gatherPlayers(for game: Game, newPlayerHandler: @escaping NewPlayerHandler) throws
-    func stopGatheringPlayers(for game: Game)
-    func welcome(player: Player, to game: Game)
-    func listenForAnswers(in game: Game, answerHandler: @escaping AnswerHandler) throws
-    func stopListeningForAnswers(in game: Game)
-    func notifyGameStart(for game: Game)
-    func requestAnswer(for question: Question, with id: String, in game: Game)
-    func adviseGameOver(for game: Game)
-    
-    func listenForQuestions(for gameID: String, questionHandler: @escaping QuestionHandler) throws
-    func listenForGameStatus(for gameID: String, statusHandler: @escaping GameStatusHandler) throws
-    func stopListeningForQuestions(for gameID: String)
-    func stopListeningForGameStatus(for gameID: String)
-    func register(player: Player, for gameID: String)
-    func send(answer: String, for playerID: String, in gameID: String, questionID: String)
+	
+	var questionPublisher: AnyPublisher<Question,Error> { get }
+	var gameStatusPublisher: AnyPublisher<GameState,Error> { get }
+	var playerStatusPublisher: AnyPublisher<PlayerState,Error> { get }
+	func register(player: Player, for gameID: String)
+	func send(answer: String, for player: Player, in gameID: String, questionID: String)
+}
+
+public protocol GameCategory {
+	var id: Int {get}
+	var name: String {get}
+}
+
+public protocol Question {
+	var question: String {get}
+	var category: String {get}
+	var type: QuestionType {get}
+	var difficulty: Difficulty {get}
+	var answers: [String] {get}
+	var correctAnswerIndex: Int {get}
+	var id: String { get }
+}
+
+public protocol GameControllerDelegate {
+	func receivedAnswer(correct: Bool, from player: Player, for question:Question, lastAnswer: Bool)
+	func asked(question: Question, index: Int)
+	func gameOver()
 }
 
 public enum Difficulty: String {
 	case any = "any"
-    case easy = "easy"
-    case medium = "medium"
-    case hard = "hard"
+	case easy = "easy"
+	case medium = "medium"
+	case hard = "hard"
 }
 
 public enum QuestionType: String {
-    case multipleChoice = "multiple"
-    case boolean = "boolean"
+	case multipleChoice = "multiple"
+	case boolean = "boolean"
 }
 
-public enum GameStatus {
-	case initialised
-	case ready
-	case inProgress
-	case over 
-	case failed(Error)
+public enum GameStatus: String {
+	case initialised = "initialised"
+	case ready = "ready"
+	case inProgress = "inProgress"
+	case over = "over"
+	case failed = "failed"
 }
 
-public protocol GameCategory {
-    var id: Int {get}
-    var name: String {get}
-}
-
-public protocol Question {
-    var question: String {get}
-    var category: String {get}
-    var type: QuestionType {get}
-    var difficulty: Difficulty {get}
-    var answers: [String] {get}
-    var correctAnswerIndex: Int {get}
-}
-
-public protocol GameControllerDelegate {
-    func receivedAnswer(correct: Bool, from player: Player, for question:Question, lastAnswer: Bool)
-    func asked(question: Question, index: Int)
-    func gameOver()
-}
-
-public struct Player:Codable, Hashable {
-    public let id: String
-    public let name: String
-    
-    public init(id: String, name: String) {
-        self.id = id
-        self.name = name
-    }
-}
-
-public struct GameError: LocalizedError
-{
-    public var errorDescription: String? { return mMsg }
-    public var failureReason: String? { return mMsg }
-    public var recoverySuggestion: String? { return "" }
-    public var helpAnchor: String? { return "" }
-    
-    private var mMsg : String
-    
-    public init(_ description: String)
-    {
-        mMsg = description
-    }
+public enum GameFrameworkError: Error {
+	case networkError(Error)
+	case gameParametersRequired
+	case noQuestionsAvailable
+	case invalidState
+	case unknown
 }
